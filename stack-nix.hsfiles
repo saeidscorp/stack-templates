@@ -1,0 +1,451 @@
+{-# START_FILE .envrc #-}
+watch_file .env nix/sources.json
+dotenv_if_exists .env
+use nix
+
+{-# START_FILE package.yaml #-}
+name:                {{name}}
+version:             0.1.0.0
+github:              "{{github-username}}{{^github-username}}githubuser{{/github-username}}/{{name}}"
+license:             BSD-3-Clause
+author:              "{{author-name}}{{^author-name}}Author name here{{/author-name}}"
+maintainer:          "{{author-email}}{{^author-email}}example@example.com{{/author-email}}"
+copyright:           "{{copyright}}{{^copyright}}{{year}}{{^year}}2024{{/year}} {{author-name}}{{^author-name}}Author name here{{/author-name}}{{/copyright}}"
+
+extra-source-files:
+- README.md
+- CHANGELOG.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/{{github-username}}{{^github-username}}githubuser{{/github-username}}/{{name}}#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+
+
+language: GHC2024
+
+default-extensions:
+  - AllowAmbiguousTypes
+  - ApplicativeDo
+  - Arrows
+  - BlockArguments
+  - DefaultSignatures
+  - DeriveAnyClass
+  - DerivingVia
+  - ExtendedLiterals
+  - FunctionalDependencies
+  - ImpredicativeTypes
+  - LexicalNegation
+  - LiberalTypeSynonyms
+  - MagicHash
+  - MonadComprehensions
+  # - MultilineStrings # GHC >= 9.12
+  - MultiWayIf
+  # - NamedDefaults # GHC >= 9.12
+  - NumDecimals
+  # - OrPatterns # GHC >= 9.12
+  - OverloadedLabels
+  - OverloadedLists
+  - OverloadedRecordDot
+  - OverloadedStrings
+  - ParallelListComp
+  - PartialTypeSignatures
+  - PatternSynonyms
+  - QuantifiedConstraints
+  - RecursiveDo
+  - TransformListComp
+  - TypeAbstractions
+  - TypeData
+  - TypeFamilies
+  - TypeFamilyDependencies
+  - UnboxedTuples
+  - ViewPatterns
+  - NoStarIsType
+  - NoFieldSelectors
+
+ghc-options:
+  - -O3
+  - -Weverything
+  - -Wcompat
+  - -fdefer-typed-holes
+  - -fshow-warning-groups
+  - -Wno-implicit-prelude
+  - -Wno-partial-type-signatures
+  - -Wno-missing-kind-signatures
+  - -Wno-missing-role-annotations
+  - -Wno-unticked-promoted-constructors
+  - -Wno-missing-safe-haskell-mode
+  - -Wno-safe
+  - -Wno-unsafe
+  - -Werror=incomplete-patterns
+  - -Werror=incomplete-uni-patterns
+  - -Werror=missing-fields
+  - -Werror=missing-methods
+  - -Werror=incomplete-record-updates
+  - -Werror=incomplete-record-selectors
+  - -Werror=partial-fields
+
+library:
+  source-dirs: src
+
+executables:
+  {{name}}-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    # - -with-rtsopts=-s
+    dependencies:
+    - {{name}}
+
+tests:
+  {{name}}-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - {{name}}
+
+{-# START_FILE .gitignore #-}
+.stack-work/
+.direnv/
+*~
+
+{-# START_FILE .vscode/extensions.json #-}
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=827846
+  // for the documentation about the extensions.json format
+  "recommendations": [
+    "haskell.haskell",
+    "UCL.haskelly",
+    "bbenoist.nix",
+    "jnoortheen.nix-ide",
+    "mkhl.direnv"
+  ]
+}
+{-# START_FILE .vscode/settings.json #-}
+{
+    "nix.enableLanguageServer": true,
+    "nix.serverPath": "nixd",
+    "haskell.manageHLS": "PATH",
+    "haskell.plugin.stan.globalOn": true,
+    "haskell.plugin.semanticTokens.globalOn": true,
+    "haskell.formattingProvider": "fourmolu"
+}
+{-# START_FILE shell.nix #-}
+let
+  sources = import ./nix;
+  pkgs = import sources.nixpkgs { config = {}; overlays = []; };
+
+  ghcVersion = "ghc9101";
+  hsPkgs = pkgs.haskell.packages.${ghcVersion};
+
+  stack-wrapped = pkgs.symlinkJoin {
+    name = "stack";
+    paths = [ pkgs.stack ];
+    buildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      wrapProgram $out/bin/stack \
+        --add-flags "\
+          --no-install-ghc \
+          --nix \
+          --nix-pure \
+          --nix-shell-file=nix/stack-integration.nix \
+        "
+    '';
+  };
+
+in
+
+pkgs.mkShell {
+  
+  buildInputs = with pkgs; [
+    haskell.compiler.${ghcVersion}
+    hsPkgs.haskell-language-server
+    npins
+    nixd
+  ] ++ [
+    stack-wrapped
+  ];
+
+  NIX_PATH = "nixpkgs=" + pkgs.path;
+  NPINS_DIRECTORY = "nix";
+}
+
+{-# START_FILE README.md #-}
+# {{name}}
+
+# Developing
+
+If you have Nix installed:
+
+```bash
+$ nix-shell
+$ code .
+```
+
+Or, if you also have direnv:
+
+```bash
+$ cd {{name}}
+$ direnv allow
+$ code .
+```
+
+{-# START_FILE Setup.hs #-}
+import Distribution.Simple
+main = defaultMain
+
+{-# START_FILE app/Main.hs #-}
+module Main (main) where
+
+import Lib (someFunc)
+
+main :: IO ()
+main = someFunc
+
+{-# START_FILE fourmolu.yaml #-}
+indentation: 2
+function-arrows: leading
+indent-wheres: true
+record-brace-space: true
+in-style: left-align
+
+{-# START_FILE nix/default.nix #-}
+/*
+  This file is provided under the MIT licence:
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+# Generated by npins. Do not modify; will be overwritten regularly
+let
+  data = builtins.fromJSON (builtins.readFile ./sources.json);
+  version = data.version;
+
+  # https://github.com/NixOS/nixpkgs/blob/0258808f5744ca980b9a1f24fe0b1e6f0fecee9c/lib/lists.nix#L295
+  range =
+    first: last: if first > last then [ ] else builtins.genList (n: first + n) (last - first + 1);
+
+  # https://github.com/NixOS/nixpkgs/blob/0258808f5744ca980b9a1f24fe0b1e6f0fecee9c/lib/strings.nix#L257
+  stringToCharacters = s: map (p: builtins.substring p 1 s) (range 0 (builtins.stringLength s - 1));
+
+  # https://github.com/NixOS/nixpkgs/blob/0258808f5744ca980b9a1f24fe0b1e6f0fecee9c/lib/strings.nix#L269
+  stringAsChars = f: s: concatStrings (map f (stringToCharacters s));
+  concatMapStrings = f: list: concatStrings (map f list);
+  concatStrings = builtins.concatStringsSep "";
+
+  # If the environment variable NPINS_OVERRIDE_${name} is set, then use
+  # the path directly as opposed to the fetched source.
+  # (Taken from Niv for compatibility)
+  mayOverride =
+    name: path:
+    let
+      envVarName = "NPINS_OVERRIDE_${saneName}";
+      saneName = stringAsChars (c: if (builtins.match "[a-zA-Z0-9]" c) == null then "_" else c) name;
+      ersatz = builtins.getEnv envVarName;
+    in
+    if ersatz == "" then
+      path
+    else
+      # this turns the string into an actual Nix path (for both absolute and
+      # relative paths)
+      builtins.trace "Overriding path of \"${name}\" with \"${ersatz}\" due to set \"${envVarName}\"" (
+        if builtins.substring 0 1 ersatz == "/" then
+          /. + ersatz
+        else
+          /. + builtins.getEnv "PWD" + "/${ersatz}"
+      );
+
+  mkSource =
+    name: spec:
+    assert spec ? type;
+    let
+      path =
+        if spec.type == "Git" then
+          mkGitSource spec
+        else if spec.type == "GitRelease" then
+          mkGitSource spec
+        else if spec.type == "PyPi" then
+          mkPyPiSource spec
+        else if spec.type == "Channel" then
+          mkChannelSource spec
+        else if spec.type == "Tarball" then
+          mkTarballSource spec
+        else
+          builtins.throw "Unknown source type ${spec.type}";
+    in
+    spec // { outPath = mayOverride name path; };
+
+  mkGitSource =
+    {
+      repository,
+      revision,
+      url ? null,
+      submodules,
+      hash,
+      branch ? null,
+      ...
+    }:
+    assert repository ? type;
+    # At the moment, either it is a plain git repository (which has an url), or it is a GitHub/GitLab repository
+    # In the latter case, there we will always be an url to the tarball
+    if url != null && !submodules then
+      builtins.fetchTarball {
+        inherit url;
+        sha256 = hash;
+      }
+    else
+      let
+        url =
+          if repository.type == "Git" then
+            repository.url
+          else if repository.type == "GitHub" then
+            "https://github.com/${repository.owner}/${repository.repo}.git"
+          else if repository.type == "GitLab" then
+            "${repository.server}/${repository.repo_path}.git"
+          else
+            throw "Unrecognized repository type ${repository.type}";
+        urlToName =
+          url: rev:
+          let
+            matched = builtins.match "^.*/([^/]*)(\\.git)?$" url;
+
+            short = builtins.substring 0 7 rev;
+
+            appendShort = if (builtins.match "[a-f0-9]*" rev) != null then "-${short}" else "";
+          in
+          "${if matched == null then "source" else builtins.head matched}${appendShort}";
+        name = urlToName url revision;
+      in
+      builtins.fetchGit {
+        rev = revision;
+        narHash = hash;
+
+        inherit name submodules url;
+      };
+
+  mkPyPiSource =
+    { url, hash, ... }:
+    builtins.fetchurl {
+      inherit url;
+      sha256 = hash;
+    };
+
+  mkChannelSource =
+    { url, hash, ... }:
+    builtins.fetchTarball {
+      inherit url;
+      sha256 = hash;
+    };
+
+  mkTarballSource =
+    {
+      url,
+      locked_url ? url,
+      hash,
+      ...
+    }:
+    builtins.fetchTarball {
+      url = locked_url;
+      sha256 = hash;
+    };
+in
+if version == 6 then
+  builtins.mapAttrs mkSource data.pins
+else
+  throw "Unsupported format version ${toString version} in sources.json. Try running `npins upgrade`"
+
+{-# START_FILE nix/sources.json #-}
+{
+  "pins": {
+    "nixpkgs": {
+      "type": "Channel",
+      "name": "nixpkgs-unstable",
+      "url": "https://releases.nixos.org/nixpkgs/nixpkgs-25.11pre814704.6afe187897be/nixexprs.tar.xz",
+      "hash": "sha256-BzfXqF3Na3TbdbNURIJOTgYO5CpMwiF4Ug9jCRvmtUM="
+    }
+  },
+  "version": 6
+}
+
+{-# START_FILE nix/stack-integration.nix #-}
+let
+  sources = import ./default.nix;
+  pkgs = import sources.nixpkgs { config = {}; overlays = []; };
+in
+
+{ ghc }:
+
+pkgs.haskell.lib.buildStackProject {
+  inherit ghc;
+  name = "haskell-stack-nix";
+  # System dependencies needed at compilation time
+  buildInputs = with pkgs; [];
+}
+
+{-# START_FILE src/Lib.hs #-}
+module Lib (someFunc) where
+
+someFunc :: IO ()
+someFunc = putStrLn "Hello from someFunc"
+
+{-# START_FILE test/Spec.hs #-}
+main :: IO ()
+main = putStrLn "Test suite not yet implemented"
+
+{-# START_FILE CHANGELOG.md #-}
+# Changelog for `{{name}}`
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to the
+[Haskell Package Versioning Policy](https://pvp.haskell.org/).
+
+## Unreleased
+
+## 0.1.0.0 - YYYY-MM-DD
+
+{-# START_FILE LICENSE #-}
+Copyright {{year}}{{^year}}2024{{/year}} {{author-name}}{{^author-name}}Author name here{{/author-name}}
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1.  Redistributions of source code must retain the above copyright notice, this
+    list of conditions and the following disclaimer.
+
+2.  Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+
+3.  Neither the name of the copyright holder nor the names of its contributors
+    may be used to endorse or promote products derived from this software
+    without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
