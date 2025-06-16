@@ -37,7 +37,6 @@ default-extensions:
   - Arrows
   - BlockArguments
   - DefaultSignatures
-  - DeriveAnyClass
   - DerivingVia
   - ExtendedLiterals
   - FunctionalDependencies
