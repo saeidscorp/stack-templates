@@ -71,6 +71,8 @@ default-extensions:
 
 ghc-options:
   - -O3
+  - -fprefer-byte-code
+  - -fbyte-code-and-object-code
   - -Weverything
   - -Wcompat
   - -fdefer-typed-holes
