@@ -13,5 +13,5 @@ $ stack new <appname> saeidscorp/<template>
 For example:
 
 ```bash
-$ stack new --resolver nightly-2025-05-05 my-awesome-app saeidscorp/stack-nix
+$ stack new --resolver lts-24.0 my-awesome-app saeidscorp/stack-nix
 ```
