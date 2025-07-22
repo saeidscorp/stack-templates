@@ -37,7 +37,10 @@ default-extensions:
   - Arrows
   - BlockArguments
   - DefaultSignatures
+  - DeriveAnyClass  # Don't use for new APIs: https://jvanbruegge.github.io/blog/2025/please-use-generically/
   - DerivingVia
+  - DisambiguateRecordFields
+  - DuplicateRecordFields
   - ExtendedLiterals
   - FunctionalDependencies
   - ImpredicativeTypes
@@ -70,25 +73,21 @@ default-extensions:
   - NoFieldSelectors
 
 ghc-options:
-  - -O3
+  - -O2
   - -fprefer-byte-code
   - -fbyte-code-and-object-code
-  - -Weverything
-  - -Wcompat
   - -fdefer-typed-holes
   - -fshow-warning-groups
-  - -Wno-implicit-prelude
+  - -Wall
+  - -Wcompat
+  - -Wmissing-pattern-synonym-signatures
   - -Wno-partial-type-signatures
-  - -Wno-missing-kind-signatures
-  - -Wno-missing-role-annotations
+  - -Wmissing-poly-kind-signatures
   - -Wno-unticked-promoted-constructors
-  - -Wno-missing-safe-haskell-mode
-  - -Wno-safe
-  - -Wno-unsafe
   - -Werror=incomplete-patterns
   - -Werror=incomplete-uni-patterns
-  - -Werror=missing-fields
   - -Werror=missing-methods
+  - -Werror=missing-fields
   - -Werror=incomplete-record-updates
   - -Werror=incomplete-record-selectors
   - -Werror=partial-fields
@@ -177,6 +176,7 @@ pkgs.mkShell {
     hsPkgs.haskell-language-server
     npins
     nixd
+    direnv
   ] ++ [
     stack-wrapped
   ];
